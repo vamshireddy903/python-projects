@@ -67,6 +67,8 @@ Your container should be running.
 Open a browser and go to:
 
     http://<EC2 Public-ip>:5000
+    
+#  How to Build and deploy application automatically
 
 # Implementing CI
 
