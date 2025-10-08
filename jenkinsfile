@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'vamsi011/python-app'
+        TAG        = "V1.0.${BUILD_NUMBER}"
+        FULL_IMAGE = "${IMAGE_NAME}:${TAG}"
+    }
+
+    stages {
+
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/vamshireddy903/python-project.git'
+            }
+        }
+
+        stage('Docker Image Build') {
+            steps {
+                sh "docker build -f docker/Mydockerfile -t ${FULL_IMAGE} ."
+            }
+        }
+
+        stage('Docker Image Push') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    passwordVariable: 'dockerpass',
+                    usernameVariable: 'dockeruser')]) {
+
+                    sh """
+                    echo \$dockerpass | docker login -u \$dockeruser --password-stdin
+                    echo "✅ Docker Login successful"
+                    docker push ${FULL_IMAGE}
+                    """
+                }
+            }
+        }
+
+        stage('Update Manifests & Push to Updates Branch') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN')]) {
+                    
+                    script {
+                        sh """
+                        # Checkout the updates branch
+                        git fetch origin updates
+                        git checkout -B updates origin/updates || git checkout -b updates
+
+                        echo "📝 Updating deployment.yaml with new image: ${FULL_IMAGE}"
+                        sed -i "s|image:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
+
+                        git config --global user.email "devops@automation.com"
+                        git config --global user.name "Jenkins Automation"
+
+                        git add manifests/deployment.yaml
+                        git diff-index --quiet HEAD || git commit -m "Update image to ${FULL_IMAGE} [skip ci]"
+
+                        # Push back to updates branch
+                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-project.git updates --force
+                        """
+                    }
+                }
+            }
+        }
+
+    post {
+        always {
+            echo "Pipeline finished for build #${BUILD_NUMBER}"
+        }
+        success {
+            echo "✅ Pipeline completed successfully"
+        }
+        failure {
+            echo "❌ Pipeline failed"
+        }
+    }
+}
