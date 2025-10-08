@@ -153,7 +153,7 @@ for more: https://kind.sigs.k8s.io/docs/user/quick-start/
    
      sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# Create k8's cluster
+# Create kind cluster
 
 Create yaml file like kind-cluster.yaml with the following
 ```
