@@ -153,7 +153,7 @@ for more: https://kind.sigs.k8s.io/docs/user/quick-start/
 
 # Create k8's cluster
 
-**Create yaml file like kind-cluster.yaml with the following
+Create yaml file like kind-cluster.yaml with the following
 ```
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
