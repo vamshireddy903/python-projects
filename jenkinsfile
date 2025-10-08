@@ -17,7 +17,16 @@ pipeline {
 
         stage('Docker Image Build') {
             steps {
-                sh "docker build -f docker/Mydockerfile -t ${FULL_IMAGE} ."
+                sh '''
+                    echo "Cleaning up old Docker images (except kindest/node)..."
+                    docker images --format "{{.Repository}}:{{.Tag}}" \
+                    | grep -v "kindest/node" \
+                    | grep "vamsi011/python-app" \
+                    | xargs -r docker rmi -f || echo "No old images to remove"
+
+                    echo "Building new Docker image: ${FULL_IMAGE}"
+                    docker build -f docker/Mydockerfile -t ${FULL_IMAGE} .
+                '''
             }
         }
 
@@ -28,11 +37,11 @@ pipeline {
                     usernameVariable: 'dockeruser',
                     passwordVariable: 'dockerpass')]) {
 
-                    sh """
-                        echo \$dockerpass | docker login -u \$dockeruser --password-stdin
-                        echo "✅ Docker Login successful"
+                    sh '''
+                        echo "$dockerpass" | docker login -u "$dockeruser" --password-stdin
+                        echo "Docker Login successful"
                         docker push ${FULL_IMAGE}
-                    """
+                    '''
                 }
             }
         }
@@ -44,8 +53,8 @@ pipeline {
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN')]) {
 
-                    sh """
-                        echo "📝 Updating deployment.yaml with new image: ${FULL_IMAGE}"
+                    sh '''
+                        echo "Updating deployment.yaml with new image: ${FULL_IMAGE}"
                         sed -i "s|image:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
 
                         git config --global user.email "devops@automation.com"
@@ -54,9 +63,8 @@ pipeline {
                         git add manifests/deployment.yaml
                         git diff-index --quiet HEAD || git commit -m "Update image to ${FULL_IMAGE} [skip ci]"
 
-                        # Push back to correct repo name (fixed typo)
-                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-projects.git
-                    """
+                        git push https://$GIT_USER:$GIT_TOKEN@github.com/vamshireddy903/python-projects.git
+                    '''
                 }
             }
         }
@@ -65,9 +73,14 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'kubernetes', variable: 'KUBECONFIG')]) {
                     sh '''
-                        echo "🚀 Deploying to Kubernetes..."
+                        echo " Cleaning up old Kubernetes pods..."
+                        kubectl delete pods --all --ignore-not-found=true
+
+                        echo "Deploying to Kubernetes..."
                         kubectl apply -f manifests/deployment.yaml
                         kubectl apply -f manifests/service.yaml
+
+                        echo "Deployment successful"
                     '''
                 }
             }
