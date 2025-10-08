@@ -25,28 +25,26 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub',
-                    passwordVariable: 'dockerpass',
-                    usernameVariable: 'dockeruser')]) {
+                    usernameVariable: 'dockeruser',
+                    passwordVariable: 'dockerpass')]) {
 
                     sh """
-                    echo \$dockerpass | docker login -u \$dockeruser --password-stdin
-                    echo "✅ Docker Login successful"
-                    docker push ${FULL_IMAGE}
+                        echo \$dockerpass | docker login -u \$dockeruser --password-stdin
+                        echo "✅ Docker Login successful"
+                        docker push ${FULL_IMAGE}
                     """
                 }
             }
         }
 
-        stage('Update Manifests & Push ') {
+        stage('Update Manifests & Push to GitHub') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'github',
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN')]) {
-                    
-                    script {
-                        sh """
-                        
+
+                    sh """
                         echo "📝 Updating deployment.yaml with new image: ${FULL_IMAGE}"
                         sed -i "s|image:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
 
@@ -56,13 +54,25 @@ pipeline {
                         git add manifests/deployment.yaml
                         git diff-index --quiet HEAD || git commit -m "Update image to ${FULL_IMAGE} [skip ci]"
 
-                        # Push back to updates branch
-                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-projects.git 
-                        """
-                    }
+                        # Push back to correct repo name (fixed typo)
+                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-projects.git
+                    """
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubernetes', variable: 'KUBECONFIG')]) {
+                    sh '''
+                        echo "🚀 Deploying to Kubernetes..."
+                        kubectl apply -f manifests/deployment.yaml
+                        kubectl apply -f manifests/service.yaml
+                    '''
+                }
+            }
+        }
+    }
 
     post {
         always {
