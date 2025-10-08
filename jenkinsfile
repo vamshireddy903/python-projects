@@ -37,7 +37,7 @@ pipeline {
             }
         }
 
-        stage('Update Manifests & Push to Updates Branch') {
+        stage('Update Manifests & Push ') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'github',
@@ -46,10 +46,7 @@ pipeline {
                     
                     script {
                         sh """
-                        # Checkout the updates branch
-                        git fetch origin updates
-                        git checkout -B updates origin/updates || git checkout -b updates
-
+                        
                         echo "📝 Updating deployment.yaml with new image: ${FULL_IMAGE}"
                         sed -i "s|image:.*|image: ${FULL_IMAGE}|" manifests/deployment.yaml
 
@@ -60,7 +57,7 @@ pipeline {
                         git diff-index --quiet HEAD || git commit -m "Update image to ${FULL_IMAGE} [skip ci]"
 
                         # Push back to updates branch
-                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-project.git updates --force
+                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/vamshireddy903/python-projects.git 
                         """
                     }
                 }
