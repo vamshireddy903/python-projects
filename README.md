@@ -153,7 +153,23 @@ for more: https://kind.sigs.k8s.io/docs/user/quick-start/
 
 # Create k8's cluster
 
-     kubectl create cluster --name demo-cluster
+**Create yaml file like kind-cluster.yaml with the following
+```
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+```
+and create the cluster
+
+     kubectl create cluster --name demo-cluster --config=kind-cluster.yaml
 
 for moreinfo: https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
