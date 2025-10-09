@@ -175,6 +175,10 @@ and create the cluster
 
 for moreinfo: https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
+**If you prefer kubeadm to create cluster**
+
+[click](https://github.com/vamshireddy903/Kubernetes/blob/main/Kubeadm_Installation.md)
+
 # 2. Install Argocd on cluster
 
       kubectl create namespace argocd
